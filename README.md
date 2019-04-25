@@ -5,15 +5,49 @@
 项目地址：https://github.com/ccwq/ioxx
 
 -   特点
-    -   语义化的请求方式，使用伪代码表示大致为 
+    -   语义化的请求方式
     
+        //伪代码
+        
         ioxx.请求的路径.请求方式(发送数据).then(结果=>{
+        
             //处理结果
+            
         })
         
-        当使用async/await之后，代码更加简洁
+        使用async/await，代码更加简洁
+        
         let 请求结果 = await ioxx.请求路径.请求方式(发送数据)
     
+    -   拥有功能强大的拦截器特性，按照请求的地址进行拦截
+    
+        ```javascript
+        
+        //响应之后对axios的响应数据进行读取/修改/延迟
+        ioxx.addInterceptors("user/info", resp=>{
+            store.commit("setUser", resp.data);
+        })
+
+        //同时拦截请求和相应
+        ioxx.addInterceptors("user/info", {
+            before(config){
+                //请求延迟，等待十秒后，才进行请求
+                return new Promise(resolve=>{
+                    setTimeout(10000, resolve, config);
+                })
+            },
+            after(response){
+                //响应延时并修改相应内容
+                return new Promise(resolve=>{
+                    setTimeout(10000, _=>{
+                        //对response进行一些耗时的操作
+                        resolve(response);
+                    });
+                })
+            }
+        }) 
+        
+        ```
     -   请求代码数量缩减
         ```
         axios({
@@ -117,6 +151,8 @@
         data: {userName, password},
     })
     ```
+    
+    拦截器功能请查看特点介绍部分
     
 -   特殊情况
     

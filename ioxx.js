@@ -35,9 +35,11 @@ export const IoxxFactory = function(config, axiosConfig){
         })
     );
 
-    ax.interceptors.request.use(function (config) {
-        // 在发送请求之前做些什么
 
+    let interceptors = new Map();
+
+    // 在发送请求之前做些什么
+    ax.interceptors.request.use(async function (config) {
         let ctype = config.headers[URL_ENCODED_KEY];
         if (!ctype) {
             let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
@@ -50,6 +52,18 @@ export const IoxxFactory = function(config, axiosConfig){
             config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&')
         }
         config = options.beforeRequest(config) || config;
+
+        //拦截器处理
+        let skey = getKeyFromAxiosOption(config), interceptor = interceptors.get(skey);
+        if (interceptor) {
+            for(let i=0; i< interceptor.length; i++){
+                let ict = interceptor[i];
+                if (ict.before) {
+                    config = await ict.before(config) || config;
+                }
+            }
+        }
+
         return config;
     }, function (error) {
         // 对请求错误做些什么
@@ -60,6 +74,19 @@ export const IoxxFactory = function(config, axiosConfig){
     ax.interceptors.response.use(
         function(resp){
             resp = options.afterResponse(resp) || resp;
+            let config = resp.config;
+
+            //拦截器处理
+            let skey = getKeyFromAxiosOption(config), interceptor = interceptors.get(skey);
+            if (interceptor) {
+                for(let i=0; i< interceptor.length; i++){
+                    let ict = interceptor[i];
+                    if(ict.after){
+                        resp = ict.after(resp) || resp;
+                    }
+                }
+            }
+
             return Promise.resolve(resp);
         },
         function(error){
@@ -72,8 +99,36 @@ export const IoxxFactory = function(config, axiosConfig){
     return new Proxy({}, {
         get (target, key) {
 
+            //创建本身
             if (key === "create") {
                 return config=>IoxxFactory(config);
+            }
+
+            //添加拦截器
+            if (key === "addInterceptors") {
+
+                /**
+                 * 添加拦截器
+                 * url 要拦截的url
+                 * before_interceptor 如果传函数则设置为after,如果穿对象就认为是自定义拦截器{before, after}
+                 */
+                return function(url, before_interceptor){
+                    let interceptor;
+                    if (typeof before_interceptor === "function") {
+                        interceptor = {after: before_interceptor}
+                    }else{
+                        interceptor = before_interceptor;
+                    }
+                    let list = interceptors.get(url) || [];
+                    list.push(interceptor);
+                    interceptors.set(url, list);
+
+                    //删除拦截器
+                    return function(){
+                        let index = list.indexOf(interceptor);
+                        list.splice(index, 1);
+                    }
+                }
             }
 
             let url, { method, actionName } = divideActionAndMethod(key, '', 'i');
@@ -156,6 +211,20 @@ function addAllMethodType(callback){
     METHOD_TYPE.forEach(method=>{
         callback[method] = callback.bind(undefined, method);
     })
+}
+
+
+/**
+ * 获取config url::method 的简写形式
+ * @param config
+ */
+function getKeyFromAxiosOption(config){
+
+    if(!config.url) return "";
+
+    let url = config.url.replace(config.baseURL, "");
+    // return `${url}::${(config.method || "get").toLocaleLowerCase()}`
+    return `${url}`
 }
 
 
