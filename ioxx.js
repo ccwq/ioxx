@@ -1,43 +1,166 @@
-import axios from 'axios'
-import { baseURL } from '../config'
+import Axios from "axios";
 
-const ax = axios.create({
-    transformRequest: [
-        (data, headers) => {
-            if (!data) return ''
-            if (headers['Content-Type'] == 'application/x-www-form-urlencoded') {
-                return Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&')
-            }
-            return data
-        }
-    ],
+const URL_ENCODED_KEY = "Content-Type";
+const URL_ENCODED_VALUE = "application/x-www-form-urlencoded";
+const _noop  = _=>{};
 
-    transformResponse: [
-        data => {
-            return data
-        }
-    ]
-})
+let ioxxDefaultConfig = {
+
+    baseURL:"",
+
+    /**
+     *.function(response){return Promise}
+     */
+    beforeRequest: _noop,
+
+
+    afterResponse: _noop,
+};
+
 
 /**
- * 请求样式转换
- * @param actions_type
+ * 构造器
  * @param config
+ * @param axiosConfig
+ * @returns {(function(*=, *=): AxiosPromise)|{}|any|(function(*=): ...*)}
+ * @constructor
  */
-export const generateAxiosRequestConfig = function (actions_type, config) {
-    let [url, method = 'get'] = actions_type.split('::')
-    config = config || {}
-    if (!/^https?:\/\//.test(url)) {
-        url = baseURL + url
-    }
-    url = pathNormalize(url)
-    return { ...config, url, method }
+export const IoxxFactory = function(config, axiosConfig){
+
+    let options = Object.assign({}, ioxxDefaultConfig, config);
+
+    let ax = Axios.create(axiosConfig || {});
+
+    ax.interceptors.request.use(function (config) {
+        // 在发送请求之前做些什么
+
+        let ctype = config.headers[URL_ENCODED_KEY];
+        if (!ctype) {
+            let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
+            ctype = defaultHeader[URL_ENCODED_KEY]
+        }
+
+        //特殊处理
+        if (ctype === URL_ENCODED_VALUE) {
+            let data = config.data;
+            config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&')
+        }
+        config = options.beforeRequest(config) || config;
+        return config;
+    }, function (error) {
+        // 对请求错误做些什么
+        return Promise.reject(error);
+    }, function (error) {}
+    );
+
+    ax.interceptors.response.use(
+        function(resp){
+            resp = options.afterResponse(resp) || resp;
+            return Promise.resolve(resp);
+        },
+        function(error){
+            return Promise.reject(error);
+        }
+    )
+
+    let ObjectPoll = new Map();
+
+    return new Proxy({}, {
+        get (target, key) {
+
+            if (key === "create") {
+                return config=>IoxxFactory(config);
+            }
+
+            let url, { method, actionName } = divideActionAndMethod(key, '', 'i');
+
+            // $开头的属性不转义
+            if (actionName.startsWith('$')) {
+                url = actionName.substr(1)
+            } else {
+                // 使驼峰变为路径
+                url = actionName.replace(/[A-Z]/g, function (gp0, index, str) {
+                    let gp_1 = str[index - 1], gp1 = str[index + 1];
+
+                    //大写，和后面一样，不动
+                    if (gp0 == gp1) {
+                        return gp0;
+                    //大写，和前面一样，删自己
+                    }else if(gp0 === gp_1){
+                        return "";
+                    //加分割
+                    }else{
+                        return "/" + gp0.toLocaleLowerCase();
+                    }
+                })
+
+                // $在字符前，强制切割路径
+                url = url.replace(/$([\da-zA-Z]+)/, function (gp0, gp1, index, str) {
+                    return '/' + gp1
+                })
+
+                if (!/^https?:\/\//.test(url)) {
+                    url = config.baseURL + url
+                }
+
+                url = pathNormalize(url);
+            }
+
+            const _key = `${url}::${method}`;
+
+            //从缓存获取
+            if(ObjectPoll.get(key)){
+                return ObjectPoll.get(key);
+            }
+
+            let _func = function (method_config, data) {
+                let config;
+                if (typeof method_config === "string") {
+                    method = method_config;
+                    if (method.toLocaleLowerCase() === "get") {
+                        config = {params: data};
+                    }else{
+                        config = {data};
+                    }
+                }else{
+                    config = method_config;
+                }
+                if (!config) {
+                    config = {};
+                }
+
+                return ax({url,method,...config});
+            }
+
+            addAllMethodType(_func);
+            ObjectPoll.set(_key, _func);
+            return _func;
+        }
+    })
 }
 
-export default function request (actions, config) {
-    return ax(generateAxiosRequestConfig(actions, config))
+let output = IoxxFactory();
+
+export default output;
+
+//以下为工具函数---
+
+
+const METHOD_TYPE = ["get", "post", "put", "delete", "head", "options"];
+
+function addAllMethodType(callback){
+    METHOD_TYPE.forEach(method=>{
+        callback[method] = callback.bind(undefined, method);
+    })
 }
 
+
+/**
+ * 生成regexp
+ * @param spliter
+ * @param flag
+ * @returns {RegExp}
+ */
 function genAJAXMethodFindRegexp (spliter, flag) {
     if (spliter) {
         spliter = '\\' + spliter
@@ -45,6 +168,14 @@ function genAJAXMethodFindRegexp (spliter, flag) {
     return new RegExp(spliter + '(get|post|delete|put)$', flag)
 }
 
+
+/**
+ * 分割actions和method
+ * @param string
+ * @param spliter
+ * @param flag
+ * @returns {{method: string, actionName: *}}
+ */
 function divideActionAndMethod (string, spliter, flag) {
     let rg_method = genAJAXMethodFindRegexp(spliter, flag)
     let actionName = string; let method = 'get'
@@ -57,88 +188,23 @@ function divideActionAndMethod (string, spliter, flag) {
     return { actionName, method }
 }
 
+
 /**
- * 使用下划线来作为action的分割
- * api.user_get_info_post(config) 会被翻译成
- * axios({
- *      ...config
- *      url:"user/get/info",
- *      method:"post"
- * })
- * @type {{}}
+ * 请求样式转换
+ * @param actions_type
+ * @param config
  */
-export const api2 = new Proxy({}, {
-    get (target, key) {
-        let { method, actionName } = divideActionAndMethod(key, '_', 'i')
-        let url = actionName.replace(/_/g, '/')
-        return function (config) {
-            return request(`${url}::${method}`, config)
-        }
+export const generateAxiosRequestConfig = function (actions_type, config) {
+    let [url, method = 'get'] = actions_type.split('::')
+    config = config || {}
+    if (!/^https?:\/\//.test(url)) {
+        url = config.baseURL + url
     }
-})
+    url = pathNormalize(url)
+    return {url, method, ...config};
+}
 
-/**
- * 使用驼峰来作为action的分割
- * api.userInfoGet(config) 会被翻译成
- * axios({
- *      ...config
- *      url:"user/info",
- *      method:"get"
- * })
- * api.noteAttachLLengthGetPost -> note/attachLength/get::post //注意LLength L 写了两遍
- * api.noteAttach$LLengthGetPost -> note/attachLLength/get::post //注意LLength 前面的 $
- * api.userGetId$10 -> user/get/id/10
- * api.userProfile("get", {id:1})-> user/profile/id/10, get, params:{id:1}
- * api.userProfile("post", {avator:'a.jpg'})-> user/profile, post, data:{id:1}
- * 使用$开头action不转义
- * api["$user/get/id/10"] -> user/get/id/10
- * @type {{}}
- **/
-export const api = new Proxy({}, {
-    get (target, key) {
-        let { method, actionName } = divideActionAndMethod(key, '', 'i'); let url
 
-        // $开头的属性不转义
-        if (actionName.startsWith('$')) {
-            url = actionName.substr(1)
-        } else {
-            // 使驼峰变为路径
-            url = actionName.replace(/([\s\S])([A-Z])(.)/g, function (gp0, gp0_5, gp1, gp2, index, str) {
-                // 重复的大写字母
-                if (gp1 == gp2) {
-                    if (gp0_5 == '$') {
-                        return gp1 + gp2
-                    } else {
-                        return gp0_5 + gp1
-                    }
-                // 不重复的大写字母，转换路径
-                } else {
-                    return gp0_5 + '/' + gp1.toLocaleLowerCase() + gp2
-                }
-            })
-
-            // $在数字前，强制切割路径
-            url = url.replace(/$([\d]+)/, function (gp0, gp1, index, str) {
-                return '/' + gp1
-            })
-        }
-
-        return function (method_config, data) {
-            let config;
-            if (typeof method_config === "string") {
-                method = method_config;
-                if (method.toLocaleLowerCase() === "get") {
-                    config = {params: data};
-                }else{
-                    config = {data};
-                }
-            }else{
-                config = method_config;
-            }
-            return request(`${url}::${method}`, config)
-        }
-    }
-})
 
 /**
  * 处理路径里面的../|./等字符
