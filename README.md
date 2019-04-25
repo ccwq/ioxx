@@ -1,6 +1,6 @@
 # ioxx 
 
-一个可以让你更加简介的进行AJAX请求的工具库, 基于 axios
+一个可以让你更加简单的进行AJAX请求的工具, 基于axios
 
 项目地址：https://github.com/ccwq/ioxx
 
