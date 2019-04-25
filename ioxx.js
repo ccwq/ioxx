@@ -29,7 +29,11 @@ export const IoxxFactory = function(config, axiosConfig){
 
     let options = Object.assign({}, ioxxDefaultConfig, config);
 
-    let ax = Axios.create(axiosConfig || {});
+    let ax = Axios.create(
+        Object.assign({}, axiosConfig, {
+            baseURL: options.baseURL
+        })
+    );
 
     ax.interceptors.request.use(function (config) {
         // 在发送请求之前做些什么
@@ -129,7 +133,7 @@ export const IoxxFactory = function(config, axiosConfig){
                     config = {};
                 }
 
-                return ax({url,method,...config});
+                return ax({url,method, ...config});
             }
 
             addAllMethodType(_func);
