@@ -4,6 +4,39 @@
 
 项目地址：https://github.com/ccwq/ioxx
 
+-   特点
+    -   语义化的请求方式，使用伪代码表示大致为 
+    
+        ioxx.请求的路径.请求方式(发送数据).then(结果=>{
+            //处理结果
+        })
+        
+        当使用async/await之后，代码更加简洁
+        let 请求结果 = await ioxx.请求路径.请求方式(发送数据)
+    
+    -   请求代码数量缩减
+        ```
+        axios({
+            url,
+            method,
+            data:{
+                id
+            }
+        })
+        ```
+        
+        ```
+        ioxx.url.method({id})
+        ```
+        两者比较之下，ioxx可以做到更加简洁
+        由于基于axios，ioxx也可以直接使用axios的方式进行请求
+        
+        ```javascript
+        ioxx.$(axiosOptions)
+        ```
+        
+    -   开箱即可请求 application/x-www-form-urlencoded 形式的数据，不知道最新版的这样，以前使用axios必须得加一堆配置，才可以是使用 
+
 -   安装
     ```
     npm install --save ioxx
@@ -39,7 +72,7 @@
             config.headers.token = token;
             return config;
         },
-    })
+    }, axiosOptions)
     ```
     
 -   使用
