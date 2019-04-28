@@ -241,7 +241,7 @@ const METHOD_TYPE_LIST = ["get", "post", "put", "delete", "head", "options"];
 const METHOD_END_RG = (_=>{
     let ret =  METHOD_TYPE_LIST;
     ret = ret.map(makeFirstLetterUpperCase);
-    ret = ret.map(w=>`[^${w[0]}$]${w}`);
+    ret = ret.map(w=>`[^${w[0]}$_]${w}`);
     ret = ret.join("|");
     ret = `(${ret})$`
     return new RegExp(ret);

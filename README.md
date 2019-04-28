@@ -130,6 +130,12 @@
     //或者
     ioxx.userInfo("get", {id})
 
+    //新增的
+    ioxx.$user_info(config)
+
+    //
+    ioxx.$user_info.get({id})
+
 
 
     /**    
@@ -139,6 +145,8 @@
 
     //或者
     ioxx.userAuthLogin("post", {userName, password})
+    ioxx.$user_auth_login.post({userName, passwd})
+
 
     //或者
     ioxx.userAuthLogin({
@@ -150,7 +158,12 @@
     ioxx.userAuthLoginPost({
         data: {userName, password},
     })
+    ioxx.$user_auth_login({
+        data: {userName, password},
+    })
+
     ```
+   
     
     拦截器功能请查看特点介绍部分
     
