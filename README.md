@@ -172,10 +172,39 @@
         ```javascript
         ioxx.superUUserLogin()
         ```
+
+<br>
+
+##   文档
+
+---
         
--   文档
-        
-    待补充
+- ``$``转义的使用
     
+    1.以``$``开头的方法会遵循另外一套简单的规则，如下
+    ```javascript
+    ioxx.$user_delete.post(); 
+    //{url:"user/delete", method:"post"}
+  
+    ioxx.$super$_user_Post()
+    //{url:"super_user/Post"}
+    ```
+    总结，所有``_``会转换为路径切割(除了``$_``)
 
+    1.  放在大写字母前面会阻止大写字母被转义为路径分割
+    ```javascript
+    ioxx.superUserDelete()
+    //{url:"super/user", method:"delete"}
+    ```
+    此时如果想要请求的地址是 "super/userDelete",可以使用 ``$`` 转义
+    ```javascript
+    ioxx.superUser$Delete();
+    //也可以使用ioxx.superUserDDelete()//重复出现两次的大写字母会被缩减为1个
+    ```
 
+    1. 强制切割路径，放在非大写字母前面(包括小写字母，数字，下连字符)，会转换为一个连字符
+    ```javascript
+    ioxx.superUser$delete.post() // {url:"super/user/delete", method:"post"}
+    ```
+
+    

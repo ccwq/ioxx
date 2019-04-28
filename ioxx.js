@@ -15,6 +15,12 @@ let ioxxDefaultConfig = {
 
 
     afterResponse: _noop,
+
+
+    /**
+     * 开启会输出请求信息到控制台
+     */
+    debug: true,
 };
 
 
@@ -35,40 +41,40 @@ export const IoxxFactory = function(config, axiosConfig){
         })
     );
 
-
+    //拦截器的Map
     let interceptors = new Map();
 
     // 在发送请求之前做些什么
     ax.interceptors.request.use(async function (config) {
-        let ctype = config.headers[URL_ENCODED_KEY];
-        if (!ctype) {
-            let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
-            ctype = defaultHeader[URL_ENCODED_KEY]
-        }
+            let ctype = config.headers[URL_ENCODED_KEY];
+            if (!ctype) {
+                let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
+                ctype = defaultHeader[URL_ENCODED_KEY]
+            }
 
-        //特殊处理
-        if (ctype === URL_ENCODED_VALUE) {
+            //特殊处理
             let data = config.data;
-            config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&')
-        }
-        config = options.beforeRequest(config) || config;
+            if (ctype === URL_ENCODED_VALUE && data) {
+                config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&')
+            }
+            config = options.beforeRequest(config) || config;
 
-        //拦截器处理
-        let skey = getKeyFromAxiosOption(config), interceptor = interceptors.get(skey);
-        if (interceptor) {
-            for(let i=0; i< interceptor.length; i++){
-                let ict = interceptor[i];
-                if (ict.before) {
-                    config = await ict.before(config) || config;
+            //拦截器处理
+            let skey = getKeyFromAxiosOption(config), interceptor = interceptors.get(skey);
+            if (interceptor) {
+                for(let i=0; i< interceptor.length; i++){
+                    let ict = interceptor[i];
+                    if (ict.before) {
+                        config = await ict.before(config) || config;
+                    }
                 }
             }
-        }
 
-        return config;
-    }, function (error) {
-        // 对请求错误做些什么
-        return Promise.reject(error);
-    }, function (error) {}
+            return config;
+        }, function (error) {
+            // 对请求错误做些什么
+            return Promise.reject(error);
+        }, function (error) {}
     );
 
     ax.interceptors.response.use(
@@ -135,33 +141,44 @@ export const IoxxFactory = function(config, axiosConfig){
 
             // $开头的属性不转义
             if (actionName.startsWith('$')) {
-                url = actionName.substr(1)
+                url = actionName.substr(1);
+                url = url.replace(/([^$])(_)/g, "$1/");
+                url = url.replace(/\$_/g, "_");
             } else {
+
                 // 使驼峰变为路径
+                // 重复2次的大写字母变为单个大写字母，不切割
                 url = actionName.replace(/[A-Z]/g, function (gp0, index, str) {
-                    let gp_1 = str[index - 1], gp1 = str[index + 1];
+                    let gp_1 = str[index - 1], gp1 = str[index + 1], gp_2 = str[index-2];
 
                     //大写，和后面一样，不动
-                    if (gp0 == gp1) {
+                    //$在大写前面，$消失，大写保持
+                    if (gp0 == gp1 || (gp_1==="$" && gp_2!=="$")) {
                         return gp0;
-                    //大写，和前面一样，删自己
+                        //大写，和前面一样，删自己
                     }else if(gp0 === gp_1){
                         return "";
-                    //加分割
+                        //加分割
                     }else{
                         return "/" + gp0.toLocaleLowerCase();
                     }
                 })
 
-                // $在字符前，强制切割路径
-                url = url.replace(/$([\da-zA-Z]+)/, function (gp0, gp1, index, str) {
+
+                // 单个$在小写字母或者数字前，$变为路径切
+                url = url.replace(/(?!$)\$([\da-z]+)/g, function (gp0, gp1, index, str) {
                     return '/' + gp1
                 })
 
+                //$的后面部位$则消除该$字符 //消除单个$ //合并$$为单$
+                url = url.replace(/\$([^$]|$)/g,"$1");
+
+                //路径加上前缀
                 if (!/^https?:\/\//.test(url)) {
                     url = config.baseURL + url
                 }
 
+                //解析//,../../,./等语法
                 url = pathNormalize(url);
             }
 
@@ -176,7 +193,7 @@ export const IoxxFactory = function(config, axiosConfig){
                 let config;
                 if (typeof method_config === "string") {
                     method = method_config;
-                    if (method.toLocaleLowerCase() === "get") {
+                    if (/^get|delete$/.test(method.toLocaleLowerCase())) {
                         config = {params: data};
                     }else{
                         config = {data};
@@ -188,7 +205,11 @@ export const IoxxFactory = function(config, axiosConfig){
                     config = {};
                 }
 
-                return ax({url,method, ...config});
+                config = {url, method, ...config};
+                if (options.debug) {
+                    console.log("ioxx debug[请求配置]:",config);
+                }
+                return ax(config);
             }
 
             addAllMethodType(_func);
@@ -204,11 +225,33 @@ export default output;
 
 //以下为工具函数---
 
+/**
+ * 使字符串的首字母大写
+ * @param string
+ * @returns {*}
+ */
+function makeFirstLetterUpperCase(string){
+    return string.replace(/^\w/,w=>w.toUpperCase())
+}
 
-const METHOD_TYPE = ["get", "post", "put", "delete", "head", "options"];
+
+
+const METHOD_TYPE_LIST = ["get", "post", "put", "delete", "head", "options"];
+
+const METHOD_END_RG = (_=>{
+    let ret =  METHOD_TYPE_LIST;
+    ret = ret.map(makeFirstLetterUpperCase);
+    ret = ret.map(w=>`[^${w[0]}$]${w}`);
+    ret = ret.join("|");
+    ret = `(${ret})$`
+    return new RegExp(ret);
+})()
+
+
+
 
 function addAllMethodType(callback){
-    METHOD_TYPE.forEach(method=>{
+    METHOD_TYPE_LIST.forEach(method=>{
         callback[method] = callback.bind(undefined, method);
     })
 }
@@ -228,19 +271,6 @@ function getKeyFromAxiosOption(config){
 }
 
 
-/**
- * 生成regexp
- * @param spliter
- * @param flag
- * @returns {RegExp}
- */
-function genAJAXMethodFindRegexp (spliter, flag) {
-    if (spliter) {
-        spliter = '\\' + spliter
-    }
-    return new RegExp(spliter + '(get|post|delete|put)$', flag)
-}
-
 
 /**
  * 分割actions和method
@@ -250,33 +280,16 @@ function genAJAXMethodFindRegexp (spliter, flag) {
  * @returns {{method: string, actionName: *}}
  */
 function divideActionAndMethod (string, spliter, flag) {
-    let rg_method = genAJAXMethodFindRegexp(spliter, flag)
-    let actionName = string; let method = 'get'
-    if (rg_method.test(string)) {
-        method = RegExp.$1
-        actionName = string.replace(rg_method, '')
+    let actionName = string; let method = 'get';
+    let matched = string.match(METHOD_END_RG);
+    if (matched) {
+        actionName = string.substr(0, matched.index);
+        method = string.substr(matched.index + 1);
     }
-    method = method.toLocaleLowerCase()
 
+    method = method.toLowerCase();
     return { actionName, method }
 }
-
-
-/**
- * 请求样式转换
- * @param actions_type
- * @param config
- */
-export const generateAxiosRequestConfig = function (actions_type, config) {
-    let [url, method = 'get'] = actions_type.split('::')
-    config = config || {}
-    if (!/^https?:\/\//.test(url)) {
-        url = config.baseURL + url
-    }
-    url = pathNormalize(url)
-    return {url, method, ...config};
-}
-
 
 
 /**
