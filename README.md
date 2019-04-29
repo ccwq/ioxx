@@ -134,7 +134,7 @@
     ioxx.$user_info(config)
 
     //
-    ioxx.$user_info.get({id})
+    ioxx.$user_info.get({id}, config)
 
 
 

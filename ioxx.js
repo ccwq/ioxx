@@ -65,7 +65,12 @@ export const IoxxFactory = function(config, axiosConfig){
                 for(let i=0; i< interceptor.length; i++){
                     let ict = interceptor[i];
                     if (ict.before) {
-                        config = await ict.before(config) || config;
+
+                        try {
+                            config = await ict.before(config) || config;
+                        }catch (e) {
+                            throw e;
+                        }
                     }
                 }
             }
@@ -78,8 +83,14 @@ export const IoxxFactory = function(config, axiosConfig){
     );
 
     ax.interceptors.response.use(
-        function(resp){
-            resp = options.afterResponse(resp) || resp;
+        async function(resp){
+
+            try {
+                resp = await options.afterResponse(resp) || resp;
+            }catch (e) {
+                throw e;
+            }
+
             let config = resp.config;
 
             //拦截器处理
@@ -88,7 +99,11 @@ export const IoxxFactory = function(config, axiosConfig){
                 for(let i=0; i< interceptor.length; i++){
                     let ict = interceptor[i];
                     if(ict.after){
-                        resp = ict.after(resp) || resp;
+                        try {
+                            resp = await ict.after(resp) || resp;
+                        }catch (e) {
+                            throw e;
+                        }
                     }
                 }
             }
@@ -252,7 +267,22 @@ const METHOD_END_RG = (_=>{
 
 function addAllMethodType(callback){
     METHOD_TYPE_LIST.forEach(method=>{
-        callback[method] = callback.bind(undefined, method);
+        callback[method] = function (args, option) {
+
+            let params,data;
+            if (/^get|delete$/i.test(method)) {
+                params = args;
+            }else{
+                data = args;
+            }
+
+            return callback({
+                params,
+                data,
+                method,
+                ...option
+            });
+        }
     })
 }
 
