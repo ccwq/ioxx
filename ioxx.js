@@ -13,15 +13,17 @@ let ioxxDefaultConfig = {
      */
     beforeRequest: _noop,
 
-
     afterResponse: _noop,
-
 
     /**
      * 开启会输出请求信息到控制台
      */
     debug: true,
 };
+
+
+
+
 
 
 /**
@@ -42,7 +44,7 @@ export const IoxxFactory = function(config, axiosConfig){
     );
 
     //拦截器的Map
-    let interceptors = new Map();
+    let interceptors = new InterceptosMgr();
 
     // 在发送请求之前做些什么
     ax.interceptors.request.use(async function (config) {
@@ -60,12 +62,13 @@ export const IoxxFactory = function(config, axiosConfig){
             config = options.beforeRequest(config) || config;
 
             //拦截器处理
-            let skey = getKeyFromAxiosOption(config), interceptor = interceptors.get(skey);
+            let skey = getKeyFromAxiosOption(config);
+            let interceptor = interceptors.get(skey);
+
             if (interceptor) {
                 for(let i=0; i< interceptor.length; i++){
                     let ict = interceptor[i];
                     if (ict.before) {
-
                         try {
                             config = await ict.before(config) || config;
                         }catch (e) {
@@ -84,7 +87,6 @@ export const IoxxFactory = function(config, axiosConfig){
 
     ax.interceptors.response.use(
         async function(resp){
-
             try {
                 resp = await options.afterResponse(resp) || resp;
             }catch (e) {
@@ -133,23 +135,7 @@ export const IoxxFactory = function(config, axiosConfig){
                  * url 要拦截的url
                  * before_interceptor 如果传函数则设置为after,如果穿对象就认为是自定义拦截器{before, after}
                  */
-                return function(url, before_interceptor){
-                    let interceptor;
-                    if (typeof before_interceptor === "function") {
-                        interceptor = {after: before_interceptor}
-                    }else{
-                        interceptor = before_interceptor;
-                    }
-                    let list = interceptors.get(url) || [];
-                    list.push(interceptor);
-                    interceptors.set(url, list);
-
-                    //删除拦截器
-                    return function(){
-                        let index = list.indexOf(interceptor);
-                        list.splice(index, 1);
-                    }
-                }
+                return interceptors.set.bind(interceptors);
             }
 
             let url, { method, actionName } = divideActionAndMethod(key, '', 'i');
@@ -234,9 +220,6 @@ export const IoxxFactory = function(config, axiosConfig){
     })
 }
 
-let output = IoxxFactory();
-
-export default output;
 
 //以下为工具函数---
 
@@ -364,3 +347,94 @@ function pathNormalize (str) {
 
     return str
 }
+
+
+/**
+ * 拦截器管理对象
+ */
+class InterceptosMgr{
+    constructor(){
+        const m = this;
+        m._map = new Map();
+    }
+
+
+    /**
+     * 获取key的拦截器列表
+     * @param key 正字或者字符串
+     * @returns {*|undefined|*}
+     */
+    getITList(key){
+        const m = this;
+
+        //正则
+        if (key.test && key.source) {
+            for(let [_key, item] of m._map){
+                if(key.source === _key.source){
+                    return item;
+                }
+            }
+
+            //字符串
+        }else{
+            return m._map.get(key) ;
+        }
+    }
+
+    /**
+     * 获取所有匹配的拦截自
+     * @param key 字符串 路径
+     * @returns {Array}
+     */
+    get(key){
+        const m = this;
+        let ret = [];
+        m._map.forEach((item, _key, map)=>{
+
+            //正则使用正则匹配
+            if(_key.test){
+                if (_key.test(key)) {
+                    ret = [...ret, ...item];
+                }
+
+                //字符串
+            }else{
+                if (_key === key) {
+                    ret = [...ret, ...item];
+                }
+            }
+        });
+        return ret;
+    }
+
+    /**
+     *
+     * @param key 可以是正则也可以是字符串
+     * @param item
+     */
+    set(key, before_interceptor){
+        const m = this;
+
+        let interceptor;
+        if (typeof before_interceptor === "function") {
+            interceptor = {before: before_interceptor}
+        }else{
+            interceptor = before_interceptor;
+        }
+
+        let list = m.getITList(key) || [];
+        list.push(interceptor);
+        m._map.set(key, list);
+
+        //删除拦截器
+        return function(){
+            let index = list.indexOf(interceptor);
+            list.splice(index, 1);
+        }
+    }
+
+}
+
+let output = IoxxFactory();
+
+export default output;

@@ -46,6 +46,9 @@
                 })
             }
         }) 
+
+        //支持使用正则添加拦截
+        ioxx.addInterceptors(/^user/, {...others});
         
         ```
     -   请求代码数量缩减
@@ -220,4 +223,13 @@
     ioxx.superUser$delete.post() // {url:"super/user/delete", method:"post"}
     ```
 
-    
+---
+
+历史
+
+1.8.0 拦截器增加正则模式
+```javascript
+ioxx.addInterceptors(/^user/, config=>{
+    //所有以user开头的请求会进入到这里// 
+})
+```
