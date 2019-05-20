@@ -88,7 +88,7 @@
     ```javascript
     //request.js
     import Ioxx from "src/libs/ioxx";
-    export default Ioxx({
+    export default Ioxx.create({
     
         //不解释
         baseURL: config.baseURL,
