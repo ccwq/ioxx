@@ -4,6 +4,8 @@ const URL_ENCODED_KEY = "Content-Type";
 const URL_ENCODED_VALUE = "application/x-www-form-urlencoded";
 const _noop  = _=>{};
 
+
+
 let ioxxDefaultConfig = {
 
     baseURL:"",
@@ -19,6 +21,11 @@ let ioxxDefaultConfig = {
      * 开启会输出请求信息到控制台
      */
     debug: true,
+
+    /**
+     * 设置axios的适配器 {see: https://github.com/bigmeow/axios-miniprogram-adapter}
+     */
+    adapter:"",
 };
 
 
@@ -42,6 +49,10 @@ export const IoxxFactory = function(config, axiosConfig){
             baseURL: options.baseURL
         })
     );
+
+    if (options.adapter) {
+        ax.defaults.adapter = options.adapter;
+    }
 
     //拦截器的Map
     let interceptors = new InterceptosMgr();
