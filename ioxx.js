@@ -59,17 +59,6 @@ export const IoxxFactory = function(config, axiosConfig){
 
     // 在发送请求之前做些什么
     ax.interceptors.request.use(async function (config) {
-            let ctype = config.headers[URL_ENCODED_KEY];
-            if (!ctype) {
-                let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
-                ctype = defaultHeader[URL_ENCODED_KEY]
-            }
-
-            //特殊处理
-            let data = config.data;
-            if (ctype === URL_ENCODED_VALUE && data) {
-                config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&')
-            }
             config = options.beforeRequest(config) || config;
 
             //拦截器处理
@@ -88,6 +77,27 @@ export const IoxxFactory = function(config, axiosConfig){
                     }
                 }
             }
+
+
+        let ctype = config.headers[URL_ENCODED_KEY];
+        if (!ctype) {
+            let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
+            ctype = defaultHeader[URL_ENCODED_KEY]
+        }
+
+        //特殊处理
+        let data = config.data;
+
+        if (data) {
+            if (ctype === URL_ENCODED_VALUE) {
+                config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&');
+            }else if(ctype === URL_ENCODED_JSON_VALUE){
+                // config.data = JSON.stringify(config.data);
+            }
+        }
+
+
+            URL_ENCODED_JSON_VALUE
 
             return config;
         }, function (error) {
@@ -130,7 +140,7 @@ export const IoxxFactory = function(config, axiosConfig){
 
     let ObjectPoll = new Map();
 
-    return new Proxy({}, {
+    const _proxy = new Proxy({}, {
         get (target, key) {
 
             //创建本身
@@ -148,6 +158,39 @@ export const IoxxFactory = function(config, axiosConfig){
                  */
                 return interceptors.set.bind(interceptors);
             }
+
+
+            /**
+             * ioxx.get("path/to/foo",  {id}, {headers})
+             * ioxx.post("path/to/foo", {id}, {headers})
+             */
+            if (METHOD_TYPE_LIST.includes(key)) {
+                key = key.toLocaleLowerCase();
+                return function(url, data, options){
+                    //第二个参数可以直接写配置
+                    if (options === true) {
+                        options = data;
+                        data = "";
+                    }
+
+                    /**
+                     * 没有配置
+                     */
+                    if (!options) {
+                        options = {};
+                    }
+
+                    options.method = key;
+                    options.url = url;
+
+                    let dataKey = /^(get|delete)$/.test(key) ? "params" : "data";
+                    if (data) {
+                        options[dataKey] = data;
+                    }
+                    return _proxy.$(options);
+                }
+            }
+
 
             let url, { method, actionName } = divideActionAndMethod(key, '', 'i');
 
@@ -228,7 +271,9 @@ export const IoxxFactory = function(config, axiosConfig){
             ObjectPoll.set(_key, _func);
             return _func;
         }
-    })
+    });
+
+    return _proxy;
 }
 
 

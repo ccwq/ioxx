@@ -138,6 +138,16 @@
 
     //
     ioxx.$user_info.get({id}, config)
+    
+    
+    //2019年08月22日 新增
+    ioxx.get("path/foo/bar", {id}, {headers});
+    
+    ioxx.get("path/foo/bar", {params:{id}, headers}, true);
+    
+    ioxx.post("path/foo/bar", {id}, {headers})
+    
+    ioxx.post("path/foo/bar", {data:{id}, headers}, true);
 
 
 
