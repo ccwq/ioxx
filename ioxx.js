@@ -78,7 +78,6 @@ export const IoxxFactory = function(config, axiosConfig){
                 }
             }
 
-
         let ctype = config.headers[URL_ENCODED_KEY];
         if (!ctype) {
             let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
@@ -95,10 +94,6 @@ export const IoxxFactory = function(config, axiosConfig){
                 // config.data = JSON.stringify(config.data);
             }
         }
-
-
-            URL_ENCODED_JSON_VALUE
-
             return config;
         }, function (error) {
             // 对请求错误做些什么
