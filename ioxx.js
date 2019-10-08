@@ -26,6 +26,11 @@ let ioxxDefaultConfig = {
      * 设置axios的适配器 {see: https://github.com/bigmeow/axios-miniprogram-adapter}
      */
     adapter:"",
+
+
+
+    //axios的配置
+    axiosConfig:""
 };
 
 
@@ -40,7 +45,9 @@ let ioxxDefaultConfig = {
  * @returns {(function(*=, *=): AxiosPromise)|{}|any|(function(*=): ...*)}
  * @constructor
  */
-export const IoxxFactory = function(config, axiosConfig){
+export const IoxxFactory = function(config){
+
+    let axiosConfig = (config && config.axiosConfig) || {};
 
     let options = Object.assign({}, ioxxDefaultConfig, config);
 
