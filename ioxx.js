@@ -1,7 +1,8 @@
 import Axios from "axios";
 
-const URL_ENCODED_KEY = "Content-Type";
-const URL_ENCODED_VALUE = "application/x-www-form-urlencoded";
+const CONTENT_TYPE_HEADERS_KEY = "Content-Type";
+const CONTENT_URL_ENCODED = "application/x-www-form-urlencoded";
+const CONTENT_JSON="application/json";
 const _noop  = _=>{};
 
 
@@ -85,20 +86,20 @@ export const IoxxFactory = function(config){
                 }
             }
 
-        let ctype = config.headers[URL_ENCODED_KEY];
+        let ctype = config.headers[CONTENT_TYPE_HEADERS_KEY];
         if (!ctype) {
             let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
-            ctype = defaultHeader[URL_ENCODED_KEY]
+            ctype = defaultHeader[CONTENT_TYPE_HEADERS_KEY]
         }
 
         //特殊处理
         let data = config.data;
 
         if (data) {
-            if (ctype === URL_ENCODED_VALUE) {
+            if (ctype == CONTENT_URL_ENCODED) {
                 config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&');
-            }else if(ctype === URL_ENCODED_JSON_VALUE){
-                // config.data = JSON.stringify(config.data);
+            }else if(ctype == CONTENT_JSON){
+                //config.data = JSON.stringify(config.data);
             }
         }
             return config;
