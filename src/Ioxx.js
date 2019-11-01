@@ -48,6 +48,11 @@ let ioxxDefaultConfig = {
 
 
 export class Ioxx {
+
+    static create(config){
+        return new this(config);
+    }
+
     constructor(config) {
 
         const m = this;
@@ -57,7 +62,7 @@ export class Ioxx {
         m._options = Object.assign({}, ioxxDefaultConfig, config);
 
         m._ax = Axios.create(
-            Object.assign({}, axiosConfig, {
+            Object.assign({}, m._axiosConfig, {
                 baseURL: m._options.baseURL
             })
         );
@@ -78,7 +83,7 @@ export class Ioxx {
 
                 //拦截器处理
                 let skey = getKeyFromAxiosOption(config);
-                let interceptor = interceptors.get(skey);
+                let interceptor = m._interceptors.get(skey);
 
                 if (interceptor) {
                     for(let i=0; i< interceptor.length; i++){
@@ -132,7 +137,8 @@ export class Ioxx {
                 let config = resp.config;
 
                 //拦截器处理
-                let skey = getKeyFromAxiosOption(config), interceptor = interceptors.get(skey);
+                let skey = getKeyFromAxiosOption(config);
+                let interceptor = m._interceptors.get(skey);
                 if (interceptor) {
                     for(let i=0; i< interceptor.length; i++){
                         let ict = interceptor[i];
@@ -190,8 +196,8 @@ export class Ioxx {
      * url 要拦截的url
      * before_interceptor 如果传函数则设置为after,如果穿对象就认为是自定义拦截器{before, after}
      */
-    get addInterceptors(){
-        return this._interceptors.set;
+    addInterceptors(key, before_interceptor){
+        return this._interceptors.set(key, before_interceptor);
     }
 
 
