@@ -5,6 +5,17 @@ const CONTENT_URL_ENCODED = "application/x-www-form-urlencoded";
 const CONTENT_JSON="application/json";
 const _noop  = _=>{};
 
+import InterceptosMgr from "./InterceptosMgr";
+
+import {
+    makeFirstLetterUpperCase,
+    METHOD_TYPE_LIST,
+    METHOD_END_RG,
+    addAllMethodType,
+    getKeyFromAxiosOption,
+    divideActionAndMethod,
+    pathNormalize,
+} from "./utils"
 
 
 let ioxxDefaultConfig = {
@@ -36,464 +47,170 @@ let ioxxDefaultConfig = {
 
 
 
+export class Ioxx {
+    constructor(config) {
+
+        const m = this;
+
+        m._axiosConfig = (config && config.axiosConfig) || {};
+
+        m._options = Object.assign({}, ioxxDefaultConfig, config);
+
+        m._ax = Axios.create(
+            Object.assign({}, axiosConfig, {
+                baseURL: m._options.baseURL
+            })
+        );
 
 
+        //设置适配器
+        if (m._options.adapter) {
+            m._ax.defaults.adapter = m._options.adapter;
+        }
 
-/**
- * 构造器
- * @param config
- * @param axiosConfig
- * @returns {(function(*=, *=): AxiosPromise)|{}|any|(function(*=): ...*)}
- * @constructor
- */
-export const IoxxFactory = function(config){
+        //拦截器的Map
+        m._interceptors = new InterceptosMgr();
 
-    let axiosConfig = (config && config.axiosConfig) || {};
+        // 在发送请求之前做些什么
+        m._ax.interceptors.request.use(
+            async function (config) {
+                config = m._options.beforeRequest(config) || config;
 
-    let options = Object.assign({}, ioxxDefaultConfig, config);
+                //拦截器处理
+                let skey = getKeyFromAxiosOption(config);
+                let interceptor = interceptors.get(skey);
 
-    let ax = Axios.create(
-        Object.assign({}, axiosConfig, {
-            baseURL: options.baseURL
-        })
-    );
-
-    if (options.adapter) {
-        ax.defaults.adapter = options.adapter;
-    }
-
-    //拦截器的Map
-    let interceptors = new InterceptosMgr();
-
-    // 在发送请求之前做些什么
-    ax.interceptors.request.use(async function (config) {
-            config = options.beforeRequest(config) || config;
-
-            //拦截器处理
-            let skey = getKeyFromAxiosOption(config);
-            let interceptor = interceptors.get(skey);
-
-            if (interceptor) {
-                for(let i=0; i< interceptor.length; i++){
-                    let ict = interceptor[i];
-                    if (ict.before) {
-                        try {
-                            config = await ict.before(config) || config;
-                        }catch (e) {
-                            throw e;
+                if (interceptor) {
+                    for(let i=0; i< interceptor.length; i++){
+                        let ict = interceptor[i];
+                        if (ict.before) {
+                            try {
+                                config = await ict.before(config) || config;
+                            }catch (e) {
+                                throw e;
+                            }
                         }
                     }
                 }
-            }
 
-        let ctype = config.headers[CONTENT_TYPE_HEADERS_KEY];
-        if (!ctype) {
-            let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
-            ctype = defaultHeader[CONTENT_TYPE_HEADERS_KEY]
-        }
+                let ctype = config.headers[CONTENT_TYPE_HEADERS_KEY];
+                if (!ctype) {
+                    let defaultHeader = config.headers[config.method.toLocaleLowerCase()]
+                    ctype = defaultHeader[CONTENT_TYPE_HEADERS_KEY]
+                }
 
-        //特殊处理
-        let data = config.data;
+                //特殊处理
+                let data = config.data;
 
-        if (data) {
-            if (ctype == CONTENT_URL_ENCODED) {
-                config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&');
-            }else if(ctype == CONTENT_JSON){
-                //config.data = JSON.stringify(config.data);
-            }
-        }
-            return config;
-        }, function (error) {
-            // 对请求错误做些什么
-            return Promise.reject(error);
-        }, function (error) {}
-    );
+                if (data) {
+                    if (ctype == CONTENT_URL_ENCODED) {
+                        config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&');
+                    }else if(ctype == CONTENT_JSON){
+                        //config.data = JSON.stringify(config.data);
+                    }
+                }
+                return config;
+            },
+            function (error) {
 
-    ax.interceptors.response.use(
-        async function(resp){
-            try {
-                resp = await options.afterResponse(resp) || resp;
-            }catch (e) {
-                throw e;
-            }
+                // 对请求错误做些什么
+                return Promise.reject(error);
+            },
+            function (error) {}
+        );
 
-            let config = resp.config;
 
-            //拦截器处理
-            let skey = getKeyFromAxiosOption(config), interceptor = interceptors.get(skey);
-            if (interceptor) {
-                for(let i=0; i< interceptor.length; i++){
-                    let ict = interceptor[i];
-                    if(ict.after){
-                        try {
-                            resp = await ict.after(resp) || resp;
-                        }catch (e) {
-                            throw e;
+        //相收到之后的立即
+        m._ax.interceptors.response.use(
+            async function(resp){
+                try {
+                    resp = await m._options.afterResponse(resp) || resp;
+                }catch (e) {
+                    throw e;
+                }
+
+                let config = resp.config;
+
+                //拦截器处理
+                let skey = getKeyFromAxiosOption(config), interceptor = interceptors.get(skey);
+                if (interceptor) {
+                    for(let i=0; i< interceptor.length; i++){
+                        let ict = interceptor[i];
+                        if(ict.after){
+                            try {
+                                resp = await ict.after(resp) || resp;
+                            }catch (e) {
+                                throw e;
+                            }
                         }
                     }
                 }
+
+                return Promise.resolve(resp);
+            },
+            function(error){
+                return Promise.reject(error);
             }
+        )
 
-            return Promise.resolve(resp);
-        },
-        function(error){
-            return Promise.reject(error);
-        }
-    )
 
-    let ObjectPoll = new Map();
+        //增加get,post等方法
+        METHOD_TYPE_LIST.forEach(key=>{
+            key = key.toLocaleLowerCase();
 
-    const _proxy = new Proxy({}, {
-        get (target, key) {
+            m[key] = function(url, data, options){
 
-            //创建本身
-            if (key === "create") {
-                return config=>IoxxFactory(config);
-            }
-
-            //添加拦截器
-            if (key === "addInterceptors") {
+                //第二个参数可以直接写配置
+                if (options === true) {
+                    options = data;
+                    data = "";
+                }
 
                 /**
-                 * 添加拦截器
-                 * url 要拦截的url
-                 * before_interceptor 如果传函数则设置为after,如果穿对象就认为是自定义拦截器{before, after}
+                 * 没有配置
                  */
-                return interceptors.set.bind(interceptors);
-            }
-
-
-            /**
-             * ioxx.get("path/to/foo",  {id}, {headers})
-             * ioxx.post("path/to/foo", {id}, {headers})
-             */
-            if (METHOD_TYPE_LIST.includes(key)) {
-                key = key.toLocaleLowerCase();
-                return function(url, data, options){
-                    //第二个参数可以直接写配置
-                    if (options === true) {
-                        options = data;
-                        data = "";
-                    }
-
-                    /**
-                     * 没有配置
-                     */
-                    if (!options) {
-                        options = {};
-                    }
-
-                    options.method = key;
-                    options.url = url;
-
-                    let dataKey = /^(get|delete)$/.test(key) ? "params" : "data";
-                    if (data) {
-                        options[dataKey] = data;
-                    }
-                    return _proxy.$(options);
-                }
-            }
-
-
-            let url, { method, actionName } = divideActionAndMethod(key, '', 'i');
-
-            // $开头的属性不转义
-            if (actionName.startsWith('$')) {
-                url = actionName.substr(1);
-                url = url.replace(/([^$])(_)/g, "$1/");
-                url = url.replace(/\$_/g, "_");
-            } else {
-
-                // 使驼峰变为路径
-                // 重复2次的大写字母变为单个大写字母，不切割
-                url = actionName.replace(/[A-Z]/g, function (gp0, index, str) {
-                    let gp_1 = str[index - 1], gp1 = str[index + 1], gp_2 = str[index-2];
-
-                    //大写，和后面一样，不动
-                    //$在大写前面，$消失，大写保持
-                    if (gp0 == gp1 || (gp_1==="$" && gp_2!=="$")) {
-                        return gp0;
-                        //大写，和前面一样，删自己
-                    }else if(gp0 === gp_1){
-                        return "";
-                        //加分割
-                    }else{
-                        return "/" + gp0.toLocaleLowerCase();
-                    }
-                })
-
-
-                // 单个$在小写字母或者数字前，$变为路径切
-                url = url.replace(/(?!$)\$([\da-z]+)/g, function (gp0, gp1, index, str) {
-                    return '/' + gp1
-                })
-
-                //$的后面部位$则消除该$字符 //消除单个$ //合并$$为单$
-                url = url.replace(/\$([^$]|$)/g,"$1");
-
-                //路径加上前缀
-                if (!/^https?:\/\//.test(url)) {
-                    url = config.baseURL + url
+                if (!options) {
+                    options = {};
                 }
 
-                //解析//,../../,./等语法
-                url = pathNormalize(url);
-            }
+                options.method = key;
+                options.url = url;
 
-            const _key = `${url}::${method}`;
-
-            //从缓存获取
-            if(ObjectPoll.get(key)){
-                return ObjectPoll.get(key);
-            }
-
-            let _func = function (method_config, data) {
-                let config;
-                if (typeof method_config === "string") {
-                    method = method_config;
-                    if (/^get|delete$/.test(method.toLocaleLowerCase())) {
-                        config = {params: data};
-                    }else{
-                        config = {data};
-                    }
-                }else{
-                    config = method_config;
+                let dataKey = /^(get|delete)$/.test(key) ? "params" : "data";
+                if (data) {
+                    options[dataKey] = data;
                 }
-                if (!config) {
-                    config = {};
-                }
-
-                config = {url, method, ...config};
-                if (options.debug) {
-                    console.log("ioxx debug[请求配置]:",config);
-                }
-                return ax(config);
+                return m.request(options);
             }
-
-            addAllMethodType(_func);
-            ObjectPoll.set(_key, _func);
-            return _func;
-        }
-    });
-
-    return _proxy;
-}
-
-
-//以下为工具函数---
-
-/**
- * 使字符串的首字母大写
- * @param string
- * @returns {*}
- */
-function makeFirstLetterUpperCase(string){
-    return string.replace(/^\w/,w=>w.toUpperCase())
-}
-
-
-
-const METHOD_TYPE_LIST = ["get", "post", "put", "delete", "head", "options"];
-
-const METHOD_END_RG = (_=>{
-    let ret =  METHOD_TYPE_LIST;
-    ret = ret.map(makeFirstLetterUpperCase);
-    ret = ret.map(w=>`[^${w[0]}$_]${w}`);
-    ret = ret.join("|");
-    ret = `(${ret})$`
-    return new RegExp(ret);
-})()
-
-
-
-
-function addAllMethodType(callback){
-    METHOD_TYPE_LIST.forEach(method=>{
-        callback[method] = function (args, option) {
-
-            let params,data;
-            if (/^get|delete$/i.test(method)) {
-                params = args;
-            }else{
-                data = args;
-            }
-
-            return callback({
-                params,
-                data,
-                method,
-                ...option
-            });
-        }
-    })
-}
-
-
-/**
- * 获取config url::method 的简写形式
- * @param config
- */
-function getKeyFromAxiosOption(config){
-
-    if(!config.url) return "";
-
-    let url = config.url.replace(config.baseURL, "");
-    // return `${url}::${(config.method || "get").toLocaleLowerCase()}`
-    return `${url}`
-}
-
-
-
-/**
- * 分割actions和method
- * @param string
- * @param spliter
- * @param flag
- * @returns {{method: string, actionName: *}}
- */
-function divideActionAndMethod (string, spliter, flag) {
-    let actionName = string; let method = 'get';
-    let matched = string.match(METHOD_END_RG);
-    if (matched) {
-        actionName = string.substr(0, matched.index);
-        method = string.substr(matched.index + 1);
+        })
     }
 
-    method = method.toLowerCase();
-    return { actionName, method }
-}
-
-
-/**
- * 处理路径里面的../|./等字符
- * @param path
- */
-function pathNormalize (str) {
-    var last = str.substr(-1, 1)
-
-    str = str || ''
-    if (str[0] === '/') str = str.substr(1)
-
-    var tokens = str.split('/')
-    last = tokens[0]
-
-    // check tokens for instances of .. and .
-    for (var i = 1; i < tokens.length; i++) {
-        last = tokens[i]
-        if (tokens[i] === '..') {
-            // remove the .. and the previous token
-            tokens.splice(i - 1, 2)
-            // rewind 'cursor' 2 tokens
-            i = i - 2
-        } else if (tokens[i] === '.') {
-            // remove the .. and the previous token
-            tokens.splice(i, 1)
-            // rewind 'cursor' 1 token
-            i--
-        }
-    }
-
-    str = tokens.join('/')
-    if (str === './') {
-        str = ''
-    } else if (last && last.indexOf('.') < 0 && str[str.length - 1] != '/') {
-        str += '/'
-    }
-
-    if (last != '/' && str.substr(-1, 1) == '/') {
-        str = str.substring(0, str.length - 1)
-    }
-
-    return str
-}
-
-
-/**
- * 拦截器管理对象
- */
-class InterceptosMgr{
-    constructor(){
-        const m = this;
-        m._map = new Map();
+    /**
+     * 添加拦截器
+     * url 要拦截的url
+     * before_interceptor 如果传函数则设置为after,如果穿对象就认为是自定义拦截器{before, after}
+     */
+    get addInterceptors(){
+        return this._interceptors.set;
     }
 
 
     /**
-     * 获取key的拦截器列表
-     * @param key 正字或者字符串
-     * @returns {*|undefined|*}
+     * 请求
+     * @param axiosOptions
+     * @returns {AxiosPromise}
      */
-    getITList(key){
-        const m = this;
-
-        //正则
-        if (key.test && key.source) {
-            for(let [_key, item] of m._map){
-                if(key.source === _key.source){
-                    return item;
-                }
-            }
-
-            //字符串
-        }else{
-            return m._map.get(key) ;
-        }
+    request(axiosOptions){
+        return this._ax(axiosOptions);
     }
 
-    /**
-     * 获取所有匹配的拦截自
-     * @param key 字符串 路径
-     * @returns {Array}
-     */
-    get(key){
-        const m = this;
-        let ret = [];
-        m._map.forEach((item, _key, map)=>{
 
-            //正则使用正则匹配
-            if(_key.test){
-                if (_key.test(key)) {
-                    ret = [...ret, ...item];
-                }
 
-                //字符串
-            }else{
-                if (_key === key) {
-                    ret = [...ret, ...item];
-                }
-            }
-        });
-        return ret;
+    //请求
+    $(){
+
     }
-
-    /**
-     *
-     * @param key 可以是正则也可以是字符串
-     * @param item
-     */
-    set(key, before_interceptor){
-        const m = this;
-
-        let interceptor;
-        if (typeof before_interceptor === "function") {
-            interceptor = {before: before_interceptor}
-        }else{
-            interceptor = before_interceptor;
-        }
-
-        let list = m.getITList(key) || [];
-        list.push(interceptor);
-        m._map.set(key, list);
-
-        //删除拦截器
-        return function(){
-            let index = list.indexOf(interceptor);
-            list.splice(index, 1);
-        }
-    }
-
 }
 
-let output = IoxxFactory();
+export default Ioxx;
 
-export default output;
