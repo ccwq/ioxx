@@ -1,20 +1,32 @@
 {
-  "name": "ioxx",
-  "version": "1.10.3",
-  "description": "一个基于axios,目标为简化请求创建过程的的库。",
-  "main": "ioxx",
-  "homepage": "https://github.com/ccwq/ioxx",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "ajax",
-    "http",
-    "request"
-  ],
-  "author": "ccwq",
-  "license": "ISC",
-  "dependencies": {
-    "axios": "^0.18.0"
-  }
+    "name": "ioxx",
+    "version": "1.10.3",
+    "description": "一个基于axios,目标为简化请求创建过程的的库。",
+    "main": "dist/ioxx.js",
+    "homepage": "https://github.com/ccwq/ioxx",
+    "scripts": {
+        "build": "webpack"
+    },
+    "keywords": [
+        "ajax",
+        "http",
+        "request"
+    ],
+    "author": "ccwq",
+    "license": "ISC",
+    "dependencies": {
+        "axios": "^0.18.0"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.6.4",
+        "@babel/plugin-proposal-class-properties": "^7.5.5",
+        "@babel/preset-env": "^7.6.3",
+        "babel-loader": "^8.0.6",
+        "clean-webpack-plugin": "^3.0.0",
+        "glob": "^7.1.5",
+        "html-webpack-plugin": "^3.2.0",
+        "mini-css-extract-plugin": "^0.8.0",
+        "webpack": "^4.41.2",
+        "webpack-cli": "^3.3.10"
+    }
 }
