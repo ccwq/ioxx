@@ -59,7 +59,7 @@ module.exports = {
     },
     // mode: "development",
     mode: "production",
-    entry: Object.values(getFiles("src/**/*.js")).reduce((ret, el)=>{
+    entry: Object.values(getFiles("src/Ioxx.js")).reduce((ret, el)=>{
         ret[el.entryName] = el.filePath;
         return ret;
     }, {}),

@@ -1,7 +1,7 @@
 /**
  * 拦截器管理对象
  */
-class InterceptosMgr{
+class InterceptorMgr{
     constructor(){
         const m = this;
         m._map = new Map();
@@ -83,4 +83,4 @@ class InterceptosMgr{
     }
 }
 
-export default InterceptosMgr;
+export default InterceptorMgr;

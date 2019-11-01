@@ -5,7 +5,7 @@ const CONTENT_URL_ENCODED = "application/x-www-form-urlencoded";
 const CONTENT_JSON="application/json";
 const _noop  = _=>{};
 
-import InterceptosMgr from "./InterceptosMgr";
+import InterceptorMgr from "./InterceptorMgr";
 
 import {
     makeFirstLetterUpperCase,
@@ -76,7 +76,7 @@ export const IoxxFactory = function(config){
 
 
     //拦截器的Map
-    let interceptors = new InterceptosMgr();
+    let interceptors = new InterceptorMgr();
 
     // 在发送请求之前做些什么
     ax.interceptors.request.use(async function (config) {
