@@ -15,7 +15,8 @@
     "author": "ccwq",
     "license": "ISC",
     "dependencies": {
-        "axios": "^0.18.0"
+        "axios": "^0.18.0",
+        "lodash": "^4.17.15"
     },
     "devDependencies": {
         "@babel/core": "^7.6.4",
