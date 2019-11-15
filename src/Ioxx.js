@@ -166,14 +166,20 @@ export class Ioxx {
         METHOD_TYPE_LIST.forEach(key=>{
             key = key.toLocaleLowerCase();
 
+            /**
+             * 分method请求
+             * @param url 请求地址
+             * @param data_options 请求options或者data。根据键自动识别
+             * @returns {AxiosPromise}
+             */
             m[key] = function(url, data_options){
                 let data, options;
 
                 if(isPlainObject(data_options)){
-                    if(data_options.data || data_options.params || data_options.headers || data_options.url || data_options.methods){
+                    if(data_options.isOption || data_options.data || data_options.params || data_options.headers || data_options.url || data_options.methods){
                         options = data_options;
                     }else{
-                        data = options;
+                        data = data_options;
                     }
                 }
 
