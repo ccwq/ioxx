@@ -166,12 +166,15 @@ export class Ioxx {
         METHOD_TYPE_LIST.forEach(key=>{
             key = key.toLocaleLowerCase();
 
-            m[key] = function(url, data, options){
+            m[key] = function(url, data_options){
+                let data, options;
 
-                //第二个参数可以直接写配置
-                if (options === true) {
-                    options = data;
-                    data = "";
+                if(isPlainObject(data_options)){
+                    if(data_options.data || data_options.params || data_options.headers || data_options.url || data_options.methods){
+                        options = data_options;
+                    }else{
+                        data = options;
+                    }
                 }
 
                 /**
