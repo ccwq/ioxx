@@ -111,9 +111,17 @@ export class Ioxx {
 
                 if (data) {
                     if (ctype == CONTENT_URL_ENCODED) {
-                        config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&');
+                        if(isPlainObject(config.data)){
+                            config.data = Object.keys(data).map(key => `${key}=${encodeURIComponent(data[key])}`).join('&');
+                        }
                     }else if(ctype == CONTENT_JSON){
-                        //config.data = JSON.stringify(config.data);
+                        if (isPlainObject(config.data)) {
+                            try {
+                                config.data = JSON.stringify(config.data);
+                            }catch (e) {
+                                console.warn("转换Object到Strings失败", config);
+                            }
+                        }
                     }
                 }
                 return config;
