@@ -165,7 +165,6 @@ export class Ioxx {
         //增加get,post等方法
         METHOD_TYPE_LIST.forEach(key=>{
             key = key.toLocaleLowerCase();
-
             /**
              * 分method请求
              * @param url 请求地址
@@ -197,7 +196,8 @@ export class Ioxx {
                 if (data) {
                     options[dataKey] = data;
                 }
-                return m.request(options);
+
+                return m._ax(options);
             }
         })
     }
@@ -213,18 +213,9 @@ export class Ioxx {
 
 
     /**
-     * 请求
-     * @param axiosOptions
-     * @returns {AxiosPromise}
-     */
-    request(axiosOptions){
-        return this._ax(axiosOptions);
-    }
-
-
-    /**
      * 支持参数顺序打乱的请求
-     * 例如  request("user/info", "get", {id:5})
+     * 例如   request(axiosOption)
+     *       request("user/info", "get", {id:5})
      *       request("user/info", "get", {id:5})
      *       request("user/info", "post", {id:9}, {headers:{token:100}})
      *       request({id:9}, {headers:{token:100}, "user/info", "get")
@@ -232,6 +223,10 @@ export class Ioxx {
      */
     request(...rest){
         const m = this;
+
+        if(rest.length == 1 && isPlainObject(rest[0])){
+            return m._ax(rest[0]);
+        }
 
         let method="get", url="", options, params, data;
 
