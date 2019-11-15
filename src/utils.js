@@ -9,7 +9,10 @@ export function makeFirstLetterUpperCase(string){
 }
 
 
-
+/**
+ * 所有可能的 method
+ * @type {*[]}
+ */
 export const METHOD_TYPE_LIST = ["get", "post", "put", "delete", "head", "options"];
 
 export const METHOD_END_RG = (_=>{

@@ -1,9 +1,10 @@
 import Axios from "axios";
-
+import isPlainObject from "lodash/isPlainObject.js";
 const CONTENT_TYPE_HEADERS_KEY = "Content-Type";
 const CONTENT_URL_ENCODED = "application/x-www-form-urlencoded";
 const CONTENT_JSON="application/json";
 const _noop  = _=>{};
+
 
 import InterceptorMgr from "./InterceptorMgr";
 
@@ -44,6 +45,7 @@ let ioxxDefaultConfig = {
     //axios的配置
     axiosConfig:""
 };
+
 
 
 
@@ -211,12 +213,80 @@ export class Ioxx {
     }
 
 
+    /**
+     * 支持参数顺序打乱的请求
+     * 例如  request("user/info", "get", {id:5})
+     *       request("user/info", "get", {id:5})
+     *       request("user/info", "post", {id:9}, {headers:{token:100}})
+     *       request({id:9}, {headers:{token:100}, "user/info", "get")
+     * @param rest
+     */
+    request(...rest){
+        const m = this;
 
-    //请求
-    $(){
+        let method="get", url="", options, params, data;
 
+        let _rest = [...rest];
+
+        //获取method
+        let _method_index = _rest.findIndex(p => {
+            if (typeof p == "string") {
+                return METHOD_TYPE_LIST.includes(p.toLowerCase())
+            } else {
+                return false;
+            }
+        });
+        if(_method_index>0){
+            method = _rest[_method_index].toLowerCase();
+            _rest.splice(_method_index, 1);
+        }
+
+
+        //获取url
+        let _url_index = _rest.findIndex(p=>typeof p == "string");
+        if (_url_index>0) {
+            url = _rest[_url_index];
+            _rest.splice(_url_index, 1);
+        }
+
+        _rest.forEach(p=>{
+            if(isPlainObject(p)){
+                if(p.headers || p.data || p.params || p.url || p.method){
+                    options = p;
+                }else{
+                    if(method == "get" || method=="delete"){
+                        params = p;
+                    }else{
+                        data = p;
+                    }
+                }
+            }
+        })
+
+        let ret = {...options};
+
+        if(method){
+            ret.method = method;
+        }
+
+        if(url){
+            ret.url = url;
+        }
+
+        if(data){
+            ret.data = data;
+        }
+
+        if(params){
+            ret.params = params;
+        }
+
+        return m._ax(ret);
     }
 }
+
+
+
 
 export default Ioxx;
 
