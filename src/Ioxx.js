@@ -135,39 +135,38 @@ export class Ioxx {
         );
 
 
-        //相收到之后的立即
-        m._ax.interceptors.response.use(
-            async function(resp){
-                try {
-                    resp = await m._options.afterResponse(resp) || resp;
-                }catch (e) {
-                    throw e;
-                }
+        const afterResp = async function(resp, isError){
+            try {
+                resp = await m._options.afterResponse(resp, isError) || resp;
+            }catch (e) {
+                throw e;
+            }
 
-                let config = resp.config;
+            let config = resp.config;
 
-                //拦截器处理
-                let skey = getKeyFromAxiosOption(config);
-                let interceptor = m._interceptors.get(skey);
-                if (interceptor) {
-                    for(let i=0; i< interceptor.length; i++){
-                        let ict = interceptor[i];
-                        if(ict.after){
-                            try {
-                                resp = await ict.after(resp) || resp;
-                            }catch (e) {
-                                throw e;
-                            }
+            //拦截器处理
+            let skey = getKeyFromAxiosOption(config);
+            let interceptor = m._interceptors.get(skey);
+            if (interceptor) {
+                for(let i=0; i< interceptor.length; i++){
+                    let ict = interceptor[i];
+                    if(ict.after){
+                        try {
+                            resp = await ict.after(resp) || resp;
+                        }catch (e) {
+                            throw e;
                         }
                     }
                 }
-
-                return Promise.resolve(resp);
-            },
-            function(error){
-                return Promise.reject(error);
             }
-        )
+
+            return resp;
+        }
+
+
+
+        //响应收到之后的处理
+        m._ax.interceptors.response.use(afterResp, afterResp);
 
 
         //增加get,post等方法
@@ -222,7 +221,8 @@ export class Ioxx {
 
     /**
      * 支持参数顺序打乱的请求
-     * 例如   request(axiosOption)
+     * 例如
+     *       request(axiosOption)
      *       request("user/info", "get", {id:5})
      *       request("user/info", "get", {id:5})
      *       request("user/info", "post", {id:9}, {headers:{token:100}})
