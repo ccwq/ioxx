@@ -1,6 +1,6 @@
 {
     "name": "ioxx",
-    "version": "3.0.3",
+    "version": "3.0.4",
     "description": "一个基于axios,目标为简化请求创建过程的的库。",
     "main": "dist/Ioxx.js",
     "homepage": "https://github.com/ccwq/ioxx",
