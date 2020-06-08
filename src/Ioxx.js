@@ -163,10 +163,8 @@ export class Ioxx {
             return resp;
         }
 
-
-
         //响应收到之后的处理
-        m._ax.interceptors.response.use(afterResp, afterResp);
+        m._ax.interceptors.response.use(afterResp, error => afterResp(error, true));
 
 
         //增加get,post等方法
