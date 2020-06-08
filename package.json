@@ -1,6 +1,6 @@
 {
     "name": "ioxx",
-    "version": "3.0.2",
+    "version": "3.0.3",
     "description": "一个基于axios,目标为简化请求创建过程的的库。",
     "main": "dist/Ioxx.js",
     "homepage": "https://github.com/ccwq/ioxx",
@@ -27,7 +27,7 @@
         "glob": "^7.1.5",
         "html-webpack-plugin": "^3.2.0",
         "mini-css-extract-plugin": "^0.8.0",
-        "webpack": "^4.41.2",
-        "webpack-cli": "^3.3.10"
+        "webpack": "^4.42.0",
+        "webpack-cli": "^3.3.11"
     }
 }
