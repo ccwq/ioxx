@@ -5,7 +5,10 @@
     "main": "dist/Ioxx.js",
     "homepage": "https://github.com/ccwq/ioxx",
     "scripts": {
-        "build": "webpack"
+        "build": "webpack",
+        "publish major": "snpm version major && snpm publish",
+        "publish minor": "snpm version minor && snpm publish",
+        "publish patch": "snpm version patch && snpm publish"
     },
     "keywords": [
         "ajax",

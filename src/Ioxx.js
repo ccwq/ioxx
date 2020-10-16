@@ -136,13 +136,13 @@ export class Ioxx {
 
 
         const afterResp = async function(resp, isError){
+            let config = resp.config;
+
             try {
                 resp = await m._options.afterResponse(resp, isError) || resp;
             }catch (e) {
                 throw e;
             }
-
-            let config = resp.config;
 
             //拦截器处理
             let skey = getKeyFromAxiosOption(config);
