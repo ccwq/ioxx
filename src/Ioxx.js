@@ -81,7 +81,7 @@ export class Ioxx {
         // 在发送请求之前做些什么
         m._ax.interceptors.request.use(
             async function (config) {
-                config = m._options.beforeRequest(config) || config;
+                config = await m._options.beforeRequest(config) || config;
 
                 //拦截器处理
                 let skey = getKeyFromAxiosOption(config);
