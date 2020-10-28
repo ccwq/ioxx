@@ -180,7 +180,7 @@ export class Ioxx {
                 let data, options;
 
                 if(isPlainObject(data_options)){
-                    if(data_options.isOption || data_options.data || data_options.params || data_options.headers || data_options.url || data_options.methods || data.responseType){
+                    if(data_options.isOption || data_options.data || data_options.params || data_options.headers || data_options.url || data_options.methods || data_options.responseType){
                         options = data_options;
                     }else{
                         data = data_options;
