@@ -17,8 +17,14 @@ import {
     pathNormalize,
 } from "./utils";
 
+import baseInterceptors from "./baseInterceptors";
+
 
 let ioxxDefaultConfig = {
+
+    //使用默认拦截器
+    userBaseInterceptors: false,
+
 
     baseURL:"",
 
@@ -67,8 +73,11 @@ export class Ioxx {
         m._options = Object.assign({}, ioxxDefaultConfig, config);
 
         let {
+            userBaseInterceptors,
             beforeRequest = noop,
             afterResponse = noop,
+            adapter,
+            baseURL,
         } = m._options;
 
 
@@ -79,17 +88,19 @@ export class Ioxx {
             prepend:false,
         })
 
+        if (userBaseInterceptors) {
+            baseInterceptors.forEach(({key, data})=>{
+                m.addInterceptors(key, data);
+            })
+        }
 
         m._ax = Axios.create(
-            Object.assign({}, m._axiosConfig, {
-                baseURL: m._options.baseURL
-            })
+            Object.assign({}, m._axiosConfig, {baseURL})
         );
 
-
         //设置适配器
-        if (m._options.adapter) {
-            m._ax.defaults.adapter = m._options.adapter;
+        if (adapter) {
+            m._ax.defaults.adapter = adapter;
         }
 
 
