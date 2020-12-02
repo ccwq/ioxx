@@ -15,16 +15,14 @@ export function makeFirstLetterUpperCase(string){
  */
 export const METHOD_TYPE_LIST = ["get", "post", "put", "delete", "head", "options"];
 
-export const METHOD_END_RG = (_=>{
-    let ret =  METHOD_TYPE_LIST;
+export const METHOD_END_RG = (_ => {
+    let ret = METHOD_TYPE_LIST;
     ret = ret.map(makeFirstLetterUpperCase);
-    ret = ret.map(w=>`[^${w[0]}$_]${w}`);
+    ret = ret.map(w => `[^${w[0]}$_]${w}`);
     ret = ret.join("|");
     ret = `(${ret})$`
     return new RegExp(ret);
-})()
-
-
+})();
 
 
 export function addAllMethodType(callback){

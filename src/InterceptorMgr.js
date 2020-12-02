@@ -45,10 +45,9 @@ class InterceptorMgr{
                 if (_key.test(key)) {
                     ret = [...ret, ...item];
                 }
-
-                //字符串
+            //字符串
             }else{
-                if (_key === key) {
+                if (_key == key || _key == "*") {
                     ret = [...ret, ...item];
                 }
             }
@@ -59,7 +58,7 @@ class InterceptorMgr{
     /**
      *
      * @param key 可以是正则也可以是字符串
-     * @param item
+     * @param before_interceptor {before:Function, after:Function} or before:Function
      */
     set(key, before_interceptor){
         const m = this;
@@ -71,8 +70,15 @@ class InterceptorMgr{
             interceptor = before_interceptor;
         }
 
+        const {prepend} = interceptor;
+
         let list = m.getITList(key) || [];
-        list.push(interceptor);
+
+        if (prepend) {
+            list.unshift(interceptor);
+        }else{
+            list.push(interceptor);
+        }
         m._map.set(key, list);
 
         //删除拦截器

@@ -5,7 +5,6 @@ const CONTENT_URL_ENCODED = "application/x-www-form-urlencoded";
 const CONTENT_JSON="application/json";
 const _noop  = _=>{};
 
-
 import InterceptorMgr from "./InterceptorMgr";
 
 import {
@@ -16,7 +15,7 @@ import {
     getKeyFromAxiosOption,
     divideActionAndMethod,
     pathNormalize,
-} from "./utils"
+} from "./utils";
 
 
 let ioxxDefaultConfig = {
@@ -40,11 +39,12 @@ let ioxxDefaultConfig = {
      */
     adapter:"",
 
-
-
     //axios的配置
     axiosConfig:""
 };
+
+
+const noop = _=>_;
 
 
 
@@ -59,9 +59,26 @@ export class Ioxx {
 
         const m = this;
 
+        //拦截器的Map
+        m._interceptors = new InterceptorMgr();
+
         m._axiosConfig = (config && config.axiosConfig) || {};
 
         m._options = Object.assign({}, ioxxDefaultConfig, config);
+
+        let {
+            beforeRequest = noop,
+            afterResponse = noop,
+        } = m._options;
+
+
+        //增加默认处理
+        m.addInterceptors("*", {
+            before:beforeRequest,
+            after:afterResponse,
+            prepend:false,
+        })
+
 
         m._ax = Axios.create(
             Object.assign({}, m._axiosConfig, {
@@ -75,13 +92,10 @@ export class Ioxx {
             m._ax.defaults.adapter = m._options.adapter;
         }
 
-        //拦截器的Map
-        m._interceptors = new InterceptorMgr();
 
         // 在发送请求之前做些什么
         m._ax.interceptors.request.use(
             async function (config) {
-                config = await m._options.beforeRequest(config) || config;
 
                 //拦截器处理
                 let skey = getKeyFromAxiosOption(config);
@@ -130,19 +144,18 @@ export class Ioxx {
 
                 // 对请求错误做些什么
                 return Promise.reject(error);
-            },
-            function (error) {}
+            }
         );
 
 
-        const afterResp = async function(resp, isError){
-            let config = resp.config;
+        const afterResp = async function(error, resp){
 
-            try {
-                resp = await m._options.afterResponse(resp, isError) || resp;
-            }catch (e) {
-                throw e;
+            if (error) {
+                // throw error;
+                return Promise.reject(error);
             }
+
+            let config = resp.config;
 
             //拦截器处理
             let skey = getKeyFromAxiosOption(config);
@@ -154,7 +167,7 @@ export class Ioxx {
                         try {
                             resp = await ict.after(resp) || resp;
                         }catch (e) {
-                            throw e;
+                            return Promise.reject(e);
                         }
                     }
                 }
@@ -164,7 +177,7 @@ export class Ioxx {
         }
 
         //响应收到之后的处理
-        m._ax.interceptors.response.use(afterResp, error => afterResp(error, true));
+        m._ax.interceptors.response.use(resp=>afterResp(null, resp), error => afterResp(error));
 
 
         //增加get,post等方法
@@ -174,15 +187,28 @@ export class Ioxx {
              * 分method请求
              * @param url 请求地址
              * @param data_options 请求options或者data。根据键自动识别
+             * @param isOptions 用来决定是否为options,如果未设置则通过前一个参数猜测
              * @returns {AxiosPromise}
              */
-            m[key] = function(url, data_options){
+            m[key] = function (url, data_options, isOptions) {
                 let data, options;
+                if (isPlainObject(data_options)) {
+                    const _opt = data_options;
 
-                if(isPlainObject(data_options)){
-                    if(data_options.isOption || data_options.data || data_options.params || data_options.headers || data_options.url || data_options.methods || data_options.responseType){
-                        options = data_options;
-                    }else{
+                    //检测是否为options
+                    if (isOptions === void 0) {
+                        isOptions = "isOptions,data,params,headers,url,methods,responseType".split(",").reduce((result, key, ls) => {
+                            if (_opt[key]) {
+                                result = true;
+                                ls.splice(1);
+                            }
+                            return result;
+                        }, false);
+                    }
+
+                    if (isOptions) {
+                        options = _opt;
+                    } else {
                         data = data_options;
                     }
                 }
@@ -201,7 +227,6 @@ export class Ioxx {
                 if (data) {
                     options[dataKey] = data;
                 }
-
                 return m._ax(options);
             }
         })
