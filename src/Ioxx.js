@@ -72,14 +72,20 @@ export class Ioxx {
 
         m._options = Object.assign({}, ioxxDefaultConfig, config);
 
+        const options = m._options;
+
         let {
             userBaseInterceptors,
             beforeRequest = noop,
             afterResponse = noop,
             adapter,
             baseURL,
-        } = m._options;
+        } = options;
 
+
+        //baseURL自动附加"/"后缀
+        baseURL = (baseURL + "/").replace(/\/*$/, "/");
+        options.baseURL = baseURL;
 
         //增加默认处理
         m.addInterceptors("*", {
@@ -102,7 +108,6 @@ export class Ioxx {
         if (adapter) {
             m._ax.defaults.adapter = adapter;
         }
-
 
         // 在发送请求之前做些什么
         m._ax.interceptors.request.use(
