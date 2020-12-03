@@ -53,12 +53,25 @@ let ioxxDefaultConfig = {
 const noop = _=>_;
 
 
+const defaultVueKey = "$ajax";
+
 
 
 export class Ioxx {
 
     static create(config){
         return new this(config);
+    }
+
+
+    //安装到vue
+    install(Vue, options = {}){
+
+        if (typeof options == "string") {
+            options = {key: options};
+        }
+        const {key=defaultVueKey} = options
+        Vue.prototype[key] = this;
     }
 
     constructor(config) {
@@ -213,7 +226,7 @@ export class Ioxx {
 
                     //检测是否为options
                     if (isOptions === void 0) {
-                        isOptions = "isOptions,data,params,headers,url,methods,responseType".split(",").reduce((result, key, ls) => {
+                        isOptions = "isOptions,data,params,headers,url,methods,responseType".split(",").reduce((result, key, i, ls) => {
                             if (_opt[key]) {
                                 result = true;
                                 ls.splice(1);
