@@ -79,12 +79,12 @@ export class Ioxx {
             beforeRequest = noop,
             afterResponse = noop,
             adapter,
-            baseURL,
+            baseURL="/",
         } = options;
 
 
         //baseURL自动附加"/"后缀
-        baseURL = (baseURL + "/").replace(/\/*$/, "/");
+        baseURL = baseURL.replace(/\/*$/, "/");
         options.baseURL = baseURL;
 
         //增加默认处理
