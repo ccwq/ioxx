@@ -11,7 +11,6 @@ import {
     makeFirstLetterUpperCase,
     METHOD_TYPE_LIST,
     METHOD_END_RG,
-    addAllMethodType,
     getKeyFromAxiosOption,
     divideActionAndMethod,
     pathNormalize,
@@ -81,6 +80,11 @@ export class Ioxx {
 
     get options(){
         return Object.assign({}, this._options);
+    }
+
+    setOption(field, value){
+        const m = this;
+        m._options[field] = value;
     }
 
     constructor(config) {
@@ -221,6 +225,11 @@ export class Ioxx {
         //增加get,post等方法
         METHOD_TYPE_LIST.forEach(key=>{
             key = key.toLocaleLowerCase();
+
+            if (key == "options") {
+                return;
+            }
+
             /**
              * 分method请求
              * @param url 请求地址
