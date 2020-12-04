@@ -74,6 +74,15 @@ export class Ioxx {
         Vue.prototype[key] = this;
     }
 
+
+    get baseURL(){
+        return this.options.baseURL;
+    }
+
+    get options(){
+        return Object.assign({}, this._options);
+    }
+
     constructor(config) {
 
         const m = this;
