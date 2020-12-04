@@ -365,6 +365,11 @@ export class Ioxx {
 
         return m._ax(ret);
     }
+
+
+    $(...rest){
+        return this.request(...rest);
+    }
 }
 
 
