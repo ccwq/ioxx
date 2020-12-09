@@ -1,5 +1,7 @@
-//收集常用的拦截器
+import get from "lodash/get";
+import set from "lodash/set";
 
+//收集常用的拦截器
 export const pathFixer = {
     before(config){
 
@@ -50,6 +52,33 @@ export default [
                         }else if (url.startsWith("/")) {
                             config.url = pageOrigin + url;
                         }
+                    }
+                }
+            }
+        }
+    }
+]
+
+
+const contentTypeField = "headers.Content-Type";
+
+/**
+ * 设置content-type的快捷属性
+ * ctype="json"
+ * ctype="form"
+ */
+export default [
+    {
+        key:"*",
+        name:"content-type-show-cut",
+        data:{
+            before(config){
+                const {ctype} = config;
+                if (ctype) {
+                    if (ctype == "json") {
+                        set(config, contentTypeField, "application/json");
+                    }else if (ctype == "form") {
+                        set(config, contentTypeField, "application/x-www-form-urlencoded");
                     }
                 }
             }

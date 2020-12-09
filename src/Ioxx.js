@@ -295,7 +295,7 @@ export class Ioxx {
      *       request(axiosOption)
      *       request("user/info", "get", {id:5})
      *       request("user/info", "get", {id:5})
-     *       request("user/info", "post", {id:9}, {headers:{token:100}})
+     *       request("user/info", "post", {id:9}, {headers:{token:100}})1
      *       request({id:9}, {headers:{token:100}, "user/info", "get")
      * @param rest
      */
