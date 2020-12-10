@@ -193,8 +193,11 @@ export class Ioxx {
         const afterResp = async function(error, resp){
 
             if (error) {
+
+                debugger;
+                resp = error;
                 // throw error;
-                return Promise.reject(error);
+                // return Promise.reject(error);
             }
 
             let config = resp.config;
@@ -207,9 +210,10 @@ export class Ioxx {
                     let ict = interceptor[i];
                     if(ict.after){
                         try {
-                            resp = await ict.after(resp) || resp;
+                            resp = await ict.after(error, resp) || resp;
                         }catch (e) {
-                            return Promise.reject(e);
+                            error = e;
+                            // return Promise.reject(e);
                         }
                     }
                 }
@@ -219,7 +223,10 @@ export class Ioxx {
         }
 
         //响应收到之后的处理
-        m._ax.interceptors.response.use(resp=>afterResp(null, resp), error => afterResp(error));
+        m._ax.interceptors.response.use(
+            resp => afterResp(null, resp),
+            error => afterResp(error, error)
+        );
 
 
         //增加get,post等方法

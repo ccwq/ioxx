@@ -60,6 +60,24 @@ export default [
                 }
             }
         }
+    },
+
+
+    /**
+     * 网络错误标记判断
+     */
+    {
+        key:"*",
+        name:"net-error-transform",
+        prepend:1,
+        data:{
+            after(error, resp){
+                if (error && error.message == "Network Error") {
+                    error.code = "-1"
+                    throw error;
+                }
+            }
+        }
     }
 ]
 
