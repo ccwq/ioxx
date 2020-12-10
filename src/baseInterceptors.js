@@ -72,8 +72,10 @@ export default [
         prepend:1,
         data:{
             after(error, resp){
-                if (error && error.message == "Network Error") {
-                    error.code = "-1"
+                if (error) {
+                    if (error.message == "Network Error") {
+                        error.code = "-1"
+                    }
                     throw error;
                 }
             }

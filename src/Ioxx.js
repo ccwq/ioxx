@@ -192,9 +192,9 @@ export class Ioxx {
 
         const afterResp = async function(error, resp){
 
-            if (error) {
+            let lastError = error;
 
-                debugger;
+            if (error) {
                 resp = error;
                 // throw error;
                 // return Promise.reject(error);
@@ -210,16 +210,21 @@ export class Ioxx {
                     let ict = interceptor[i];
                     if(ict.after){
                         try {
-                            resp = await ict.after(error, resp) || resp;
+                            resp = await ict.after(lastError, resp) || resp;
+                            lastError = null;
                         }catch (e) {
-                            error = e;
+                            lastError = e;
                             // return Promise.reject(e);
                         }
                     }
                 }
             }
 
-            return resp;
+            if (lastError) {
+                throw lastError;
+            }else{
+                return resp;
+            }
         }
 
         //响应收到之后的处理
